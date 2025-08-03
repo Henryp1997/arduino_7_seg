@@ -30,6 +30,8 @@ Arduino pins: [2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12, 13]
 Display pins: [6, 3, 2, 7, 5, 1, 9, 11, 12,  4,  8, 10]
 */
 
+#include "consts.hpp"
+
 int init_all_pins() {
   // Must be called at the start of program
   for (int i = 0; i < 9; i++) {
@@ -54,7 +56,7 @@ void set_number_from_pin_vals(int pin_vals[7]) {
     }
 }
 
-int set_number(int num, int decimal) {
+int set_number(int num) {
     int pin_vals[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     if (num == 0) {
         set_number_from_pin_vals(zero);
@@ -86,56 +88,71 @@ int set_number(int num, int decimal) {
     else if (num == 9) {
         set_number_from_pin_vals(nine);
     }
+}
 
-    digitalWrite(segment_pins[7], decimal);
+int extract_d1(int val) {
+  return floor(val / 1000);
+}
+
+int extract_d2(int val, int d4, int d3) {
+  // d4 and d3 values needed to calculate
+  return ((val - d3*10 - d4) / 100) % 10;
+}
+
+int extract_d3(int val, int d4) {
+  // d4 value needed to calculate
+  return ((val - d4) / 10) % 10;
+}
+
+int extract_d4(int val) {
+  return val % 10;
 }
 
 void set_display(float value) {
-    digit1 = floor(value);
-    if (value > 10) {
-        // for values greater than or equal to 10, the digit1 value
-        // is actually the first two digits
-        int digit1_new = floor(digit1 / 10);
-        int digit2_new = digit1 % 10;
-        int digit3_new = floor((value - digit1) * 10);
-        int digit4_new = floor((((value - digit1) * 10) - digit3_new) * 10);
-        digit1 = digit1_new; digit2 = digit2_new; digit3 = digit3_new; digit4 = digit4_new;
+    if (value > 9999) {
+      return;
     }
-    else {
-        digit2 = floor((value - digit1) * 10);
-        digit3 = floor((((value - digit1) * 10) - digit2) * 10);
-    }
-    
-    // set first digit
-    set_digit_pos(0, 1, 1, 1);
-    if (value > 10) {
-        set_number(digit1, false);
-    }
-    else {
-        set_number(digit1, true);
-    }
-    set_all_low();
 
-    // set second digit
-    set_digit_pos(1, 0, 1, 1);
-    if (value > 10) {
-        set_number(digit2, true);
+    d1 = -1; d2 = -1; d3 = -1; d4 = -1;
+    if (value < 10) {
+      d4 = extract_d4(value);
     }
-    else {
-        set_number(digit2, false);
+    else if ((value >= 10) && (value < 100)) {
+      // Only set third and fourth digits
+      d4 = extract_d4(value);
+      d3 = extract_d3(value, d4);
     }
-    set_all_low();
-    
-    // set third digit
-    set_digit_pos(1, 1, 0, 1);
-    set_number(digit3, false);
-    set_all_low();
+    else if ((value >= 100) && (value < 1000)) {
+      // Only set second, third and fourth digits
+      d4 = extract_d4(value);
+      d3 = extract_d3(value, d4);
+      d2 = extract_d2(value, d4, d3);
+    }
+    else if (value > 1000) {
+      d4 = extract_d4(value);
+      d3 = extract_d3(value, d4);
+      d2 = extract_d2(value, d4, d3);
+      d1 = extract_d1(value);
+    }
 
-    // set fourth digit if needed
-    set_digit_pos(1, 1, 1, 0);
-    if (value > 10) {
-        set_number(digit4, false);
-        set_all_low();
+    // Set fourth digit
+    if (d4 != -1) {
+      set_digit_pos(1, 1, 1, 0); set_number(d4); set_all_low();
+    }
+
+    // Set third digit
+    if (d3 != -1) {
+      set_digit_pos(1, 1, 0, 1); set_number(d3); set_all_low();
+    }
+
+    // Set second digit
+    if (d2 != -1) {
+      set_digit_pos(1, 0, 1, 1); set_number(d2); set_all_low();
+    }
+
+    // Set first digit
+    if (d1 != -1) {
+      set_digit_pos(0, 1, 1, 1); set_number(d1); set_all_low();
     }
 }
 
@@ -143,4 +160,18 @@ void set_all_low() {
     for (int i = 0; i < 8; i++) {
         digitalWrite(segment_pins[i], 0);
     }
+}
+
+void setup() {
+  init_all_pins();
+  // Serial.begin(9600);
+}
+
+void loop() {
+  unsigned long current_time = millis();
+  if (current_time - start_time > 500) {
+    temp += 1;
+    start_time = millis();
+  }
+  set_display(temp);
 }
