@@ -1,36 +1,42 @@
-/*
-     6
-    ---
-11|     |7
-  |  12 |
-    ---
-10|     |8
-  |     |
-    ---
-     9
-
-  pin 13 is decimal point (probably don't need)
-
-  Digit 1 = Arduino pin 2
-  Digit 2 = Arduino pin 3
-  Digit 3 = Arduino pin 4
-  Digit 4 = Arduino pin 5
-
-Seven segment display pins:                 
------------------------------------
-|      .   .   .   .   .   .      |
-|      1   2   3   4   5   6      |  
-|      .   .   .   .   .   .      | 
-|      7   8   9  10  11  12      | 
------------------------------------ 
-
-Mapping
-__________________________________________________
-Arduino pins: [2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12, 13]
-Display pins: [6, 3, 2, 7, 5, 1, 9, 11, 12,  4,  8, 10]
-*/
-
 #include "consts.hpp"
+
+void set_display(float value) {
+    if (value > 9999) {
+      return;
+    }
+
+    d1 = -1; d2 = -1; d3 = -1
+    d4 = value % 10;
+
+    if (value >= 10) {
+      // Two digit number
+      d3 = floor((value % 100) / 10)
+    }
+
+    if (value >= 100) {
+      // Three digit number
+      d2 = floor((value % 1000) / 100)
+    }
+    
+    if (value >= 1000) {
+      // Four digit number
+      d1 = floor(value / 1000);
+    }
+
+    // SET DIGITS
+    if (d4 != -1) {
+      set_digit_pos(1, 1, 1, 0); set_number(d4); set_all_low();
+    }
+    if (d3 != -1) {
+      set_digit_pos(1, 1, 0, 1); set_number(d3); set_all_low();
+    }
+    if (d2 != -1) {
+      set_digit_pos(1, 0, 1, 1); set_number(d2); set_all_low();
+    }
+    if (d1 != -1) {
+      set_digit_pos(0, 1, 1, 1); set_number(d1); set_all_low();
+    }
+}
 
 int init_all_pins() {
   // Must be called at the start of program
@@ -87,72 +93,6 @@ int set_number(int num) {
     }
     else if (num == 9) {
         set_number_from_pin_vals(nine);
-    }
-}
-
-int extract_d1(int val) {
-  return floor(val / 1000);
-}
-
-int extract_d2(int val, int d4, int d3) {
-  // d4 and d3 values needed to calculate
-  return ((val - d3*10 - d4) / 100) % 10;
-}
-
-int extract_d3(int val, int d4) {
-  // d4 value needed to calculate
-  return ((val - d4) / 10) % 10;
-}
-
-int extract_d4(int val) {
-  return val % 10;
-}
-
-void set_display(float value) {
-    if (value > 9999) {
-      return;
-    }
-
-    d1 = -1; d2 = -1; d3 = -1; d4 = -1;
-    if (value < 10) {
-      d4 = extract_d4(value);
-    }
-    else if ((value >= 10) && (value < 100)) {
-      // Only set third and fourth digits
-      d4 = extract_d4(value);
-      d3 = extract_d3(value, d4);
-    }
-    else if ((value >= 100) && (value < 1000)) {
-      // Only set second, third and fourth digits
-      d4 = extract_d4(value);
-      d3 = extract_d3(value, d4);
-      d2 = extract_d2(value, d4, d3);
-    }
-    else if (value > 1000) {
-      d4 = extract_d4(value);
-      d3 = extract_d3(value, d4);
-      d2 = extract_d2(value, d4, d3);
-      d1 = extract_d1(value);
-    }
-
-    // Set fourth digit
-    if (d4 != -1) {
-      set_digit_pos(1, 1, 1, 0); set_number(d4); set_all_low();
-    }
-
-    // Set third digit
-    if (d3 != -1) {
-      set_digit_pos(1, 1, 0, 1); set_number(d3); set_all_low();
-    }
-
-    // Set second digit
-    if (d2 != -1) {
-      set_digit_pos(1, 0, 1, 1); set_number(d2); set_all_low();
-    }
-
-    // Set first digit
-    if (d1 != -1) {
-      set_digit_pos(0, 1, 1, 1); set_number(d1); set_all_low();
     }
 }
 
